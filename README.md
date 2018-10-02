@@ -1,0 +1,2 @@
+# continuous-php-deployment
+A continuous deployment project I use when developing certain PHP projects. The project is based on Gulp and some additions. This project differs from others due to the PHP files. They dont need to be compiled and minified, but they should be uploaded non the less. I needed something to help me deploy changes instantly, and i dont care for saving a file and then remember to accept the upload-prompt from FileZilla before i can see the changes in my browser. 
