@@ -8,12 +8,12 @@
  * Created by: Nyvang - github.com/nyvang
  */
 
- 
+ 'use strict';
 
  //  ---------------> S E T U P <---------------   //
  
 //  Setup Modules and dependencies
-const gulp 			= require('gulp-async-tasks')(require('gulp')),
+const gulp 			= require('gulp'),
 	  gutil 		= require('gulp-util'),
 	  ftp 			= require('vinyl-ftp'),
 	  sass 			= require('gulp-sass'),
@@ -42,9 +42,10 @@ const viewMask 		= c.paths.phpViewsMask,
 	  viewDir 		= c.paths.phpView,
 	  classesDir 	= c.paths.phpClasses,
 	  configDir 	= c.paths.phpConfig,
+	  rmtBackupPath = c.paths.overallBackupPath,
 	  localBackupDir= c.paths.localBackup,
 	  scssSrc 		= c.paths.scssSrc,
-	  scssDest 		= c.paths.scssDest
+	  scssDest 		= c.paths.scssDest,
 	  cssSrc 		= c.paths.cssSrc,
 	  cssDest 		= c.paths.cssDest;
 
@@ -146,7 +147,7 @@ gulp.task('watch', () => {
 	gulp.watch(viewMask, ['up']); 
 });
 
-//gulp.task('watch', () => { gulp.watch(styleSrc, ['scss']); });
+gulp.task('watch', () => { gulp.watch(scssSrc, ['scss']); });
 
 gulp.task('promptuser', function() {
 	console.log('Runnnig this task will push the files to the LIVE server!');
@@ -154,11 +155,6 @@ gulp.task('promptuser', function() {
 		runSequence('scss', 'cssmin', 'up')
 	}
 });
-
-
-//gulp.task('default', function() {
-//	gulp.pipe(gulpIf('promptuser', ));
-//});
 
 gulp.task('build', ['scss', 'cssmin'], function (){
   console.log('Building files');
@@ -173,29 +169,30 @@ gulp.task('build', ['scss', 'cssmin'], function (){
  */
 var backupProd = () => {
 
+   	log(chalk`Searching for remote files... This might take a while.`);
 	var nodeFTP = initFtpClient();
 	try {
 		return nodeFTP.connect( () => {
-			nodeFTP.download('/fuel/app/classes/', localBackupDir + "/fuel/app/classes/", {
+			nodeFTP.download(rmtBackupPath, localBackupDir + rmtBackupPath, {
 		        overwrite: 'all'
 		    }, function (result) {
 
 		    	// Do error check
-		        if(!isObjectAndEmpty(result.errors)) {
+		        if(isObjectAndEmpty(result.errors)) {
 		        	log(" ");
 		        	log(chalk`Backup was {greenBright.bold SUCCESSFUL!}. The new files will now be pushed to the server.`);
 					readline.keyIn('Press any key to continiue...');
 						pushToServer();
 		        } else {
-		        	log(" ");
-		        	log(chalk.white.bold.bgRed("      Backup FAILED!      "));
+		        	log(result.errors);
+		        	log(chalk.white.bold.bgRed('      Backup FAILED!      '));
 		        	log(chalk`Continiue pushing to producton server, {red.bold WITHOUT} backup? (y/n):` );
 					var answer = readline.keyInYN();
 
 					if(answer) {
 						pushToServer();
 					} else {
-						log(chalk`Push to producton has been {greenBright.bold cancelled}. This process will now terminate`);
+						log(chalk`Push to producton has been {greenBright.bold cancelled} by the user. This process will now terminate`);
 						process.exit(0);
 					}
 		        }
@@ -237,18 +234,22 @@ var pushToServer = () => {
     //   P U S H  T O   P R O D U C T I O N   //
     ////////////////////////////////////////////
 
-gulp.task('push:async', () => {
+gulp.task('deploy', () => {
 
-	log(chalk.red.bold.bgYellowBright('                     W A R N I N G  !                    '));
+	log(chalk.red.bold.bgYellowBright('                                                                   '));
+	log(chalk.red.bold.bgYellowBright('                          W A R N I N G  !                         '));
+	log(chalk.red.bold.bgYellowBright('                                                                   '));
+	log(chalk.red.bold(' '));
 	log(chalk.red.bold('You are about to push new/changed files to the production environment'));
 	log(chalk.red.bold('Before any files are uploaded, the remote files are downloaded to the backup location'));
-	log(" ");
+	log(chalk.red.bold('If the backup encounter any errors, you will be prompted to continiue upload'));
+	log(' ');
 	log(chalk.red.bold('Are you sure?'));
-	log(chalk`To initiate the backup and the upload, enter \'{red.bold b}\'`);
+	log(chalk`To initiate the backup and the upload, enter \'{red.bold DEPLOY}\'`);
 	var answer = readline.prompt();
 
-	if("b" == answer) {
-		log(chalk.green("Initiating backup of producton environment !"));
+	if('DEPLOY' == answer) {
+		log(chalk.green('Initiating backup of producton environment !'));
 		backupProd();
 
 	} else {
@@ -256,6 +257,3 @@ gulp.task('push:async', () => {
 		readline.keyIn('Press any key to continiue...');
 	}
 });
-
-
-gulp.task('default', ['push:async']);
